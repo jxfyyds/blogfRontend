@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+	<link rel="stylesheet" href="./bootstrap/css/bootstrap.css">
+	<link rel="stylesheet" href="./css/base.css">
+	<style>
+		.content .item {
+			margin-top: 10px;
+			margin-bottom: 10px;
+		}
+
+		.content .item img {
+			width: 100%;
+			height: 100%;
+			box-shadow: 0px 0px 10px #ccc;
+
+		}
+
+		.content .item .title:hover {
+			text-decoration: underline;
+			cursor: pointer;
+		}
+
+
+		.content .item div:first-child:hover img {
+			opacity: 0.7;
+			cursor: pointer;
+			transition: all 0.3s ease-in-out;
+		}
+
+		.content .item .intro {
+			margin-top: 10px;
+			color: #ccc;
+			font-size: 14px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<nav class="navbar navbar-default">
+			<div class="container-fluid">
+				<!-- Brand and toggle get grouped for better mobile display -->
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+						data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#" style="display:flex;">
+
+					</a>
+				</div>
+
+				<!-- Collect the nav links, forms, and other content for toggling -->
+				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+
+					<ul class="nav navbar-nav navbar-right">
+						<li><a href="#">首页</a></li>
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+								aria-haspopup="true" aria-expanded="false">分类 <span class="caret"></span></a>
+							<ul class="dropdown-menu" id="cates">
+							</ul>
+						</li>
+						<li><a href="/tags.html">标签</a></li>
+						<li><a href="/about.html">关于我</a></li>
+					</ul>
+				</div><!-- /.navbar-collapse -->
+			</div><!-- /.container-fluid -->
+		</nav>
+
+		<div class="content">
+			<h4>最新文章</h4>
+			<div class="artlist" id="articles">
+				<div class='item row'>
+					<div class="col-md-2">
+						<img src="http://placehold.it/170x100/ff3333/ffffff?text=like%20you" alt="">
+					</div>
+					<div class="col-md-10">
+						<div class="date ">作者：admin 、 2019-12-08 、分类：前端</div>
+						<div class="title">这是介绍中vscode...</div>
+						<div class="intro">这是介绍中vscode这是介绍中vscode这是介绍中vscode...</div>
+					</div>
+					<hr>
+				</div>
+
+
+			</div>
+		</div>
+		<button type="button" id="loadMore" class="btn  btn-block">查看更多</button>
+		<hr>
+
+		<div class="footer" style="text-align:center;font-size: 14px; color: #999;margin:10px 0;">
+			首页 | 主站 | GitHub | created at 2020/02/4 | 
+		</div>
+	</div>
+</body>
+<script src="./js/jquery.js"></script>
+<script src="./bootstrap/js/bootstrap.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/layer/3.5.1/layer.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/nprogress/0.2.0/nprogress.js"></script>
+
+<script>
+
+	let page = 1;
+	let pagesize = 2;
+	let isFinish = false;
+	//初始化数据
+	initData()
+	//加载更多
+	$('#loadMore').on('click', function () {
+		if (isFinish) {
+			layer.msg('数据已经加载完毕', { icon: 0 })
+			return;
+		}
+		//loading提示
+		$(this).prop('disabled', true).html('loading......')
+		page++;
+		loadArticle(page, pagesize).then(res => {
+
+			if (res.length < pagesize) {
+				isFinish = true;
+			}
+			$(this).prop('disabled', false).html('查看更多')
+			let articlesHtml = renderArticle(res);
+			let oldHtml = $('#articles').html();
+			$('#articles').html(oldHtml + articlesHtml)
+		})
+
+	})
+
+	function loadArticle(page, pagesize) {
+		NProgress.set(0.4)//开启
+		return $.ajax({
+			url: 'http://127.0.0.1:5686/api/article',
+			data: { page, pagesize },
+			complete() {
+				NProgress.done()//关闭
+			}
+		})
+	}
+
+	function loadCate() {
+		return $.ajax({
+			url: 'http://127.0.0.1:5686/api/cate'
+		})
+	}
+	async function initData() {
+		NProgress.set(0.4)//开启
+		//渲染分页和文章的数据
+		let pro1 = loadArticle(page, pagesize);
+		let pro2 = loadCate();
+		let data = await Promise.all([pro1, pro2])
+		NProgress.done()//关闭
+		let [articles, cates] = data;
+		//渲染所用的分页数据
+		let lis = renderCate(cates)
+		let divs = renderArticle(articles)
+		$('#cates').html(lis)
+		$('#articles').html(divs)
+		console.log(cates, articles);
+	}
+	//渲染分页数据
+	function renderCate(cates){
+		let lis = '';
+		cates.forEach((cat) => {
+			let {id,name} = cat;
+			// 拼接字符串li
+			lis += `<li><a href="/cate.html?id=${id}">${name}</a></li>`
+		});
+
+		return lis;
+	}
+
+	//渲染文章数据
+	function renderArticle(article) {
+
+		let divs = '';
+		article.forEach((art) => {
+			let { id, title, cat_id, name, author, img, addtime } = art;
+			if (!img) {
+				img = 'http://placehold.it/200x140/ffde00/aaabbb?text=dede'
+			} else {
+				img = 'http://127.0.0.1:5686/' + img;
+
+			}
+
+			// 拼接字符串li
+			divs += `<div class='item row'>
+					<div class="col-md-2">
+						<img src="${img}" alt="">
+					</div>
+					<div class="col-md-10">
+						<div class="date ">作者：${author} 、 ${addtime} 、分类：<a href="/cate.html?cat_id=${cat_id}">${name}</a></div>
+						<a href='/detail.html?id=${id}'><div class="title">${title}</div></a>
+					</div>
+					<hr>
+			</div>
+			`
+		});
+
+		return divs;
+	}
+
+
+
+</script>
+
+</html>
